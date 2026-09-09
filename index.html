@@ -4,18 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Афіша подій міста</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Шапка з назвою і навігацією -->
+     <header>
+        <h1>Афіша подій міста</h1>
+        <nav>
+            <ul>
+                <li><a href="#event-section">Події</a></li>
+                <li><a href="#sidebar">Обрана подія</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="filter-section">
+            <h2>Фільтр за датою/категорією</h2>
+            <label for="date-filter">Дата:</label>
+            <input type="date" id="date-filter">
+        </section>
+
+        <section id="event-section">
+            <h2>Список подій</h2>
+            <article id="event">
+                 <h3>Назва події</h3>
+                 <img src="assets/img/event.jpg" alt="Опис зображення події">
+                <p>Опис події</p>
+            </article>
+        </section>
+    </main>
+
     
-    <!-- Блок фільтра за датою/категорією -->
+    <aside id="sidebar">
+        <h2>Обрана подія</h2>
+        <div id="selected-event">
+            <!-- Тут буде відображатися обрана подія -->
+        </div>
+    </aside>
     
-    <!-- Список подій (картки) -->
-    
-    <!-- Блок деталей обраної події -->
-    
-    <!-- Підвал -->
+    <footer>
+        <p>&copy; 2026 Афіша подій міста. Всі права захищені.</p>
+        <p>Контактна інформація: example@example.com</p>
+    </footer>
 
     <script src="js/app.js"></script>
 </body>
