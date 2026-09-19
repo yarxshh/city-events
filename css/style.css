@@ -13,6 +13,8 @@ body {
 header {
   background-color: #1a1a1a;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
 }
 
 header h1 {
@@ -52,7 +54,11 @@ section {
   padding: 16px;
   margin-bottom: 10px;
   background-color: #ffffff;
+  
 }
+
+
+
 
 aside {
   border: 1px solid #cccccc;
@@ -66,4 +72,38 @@ footer {
   font-size: 0.9rem;
   color: #666;
   padding: 20px;
+}
+
+img{
+  max-width: 100%;
+  height: auto;
+}
+
+.cards-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px; 
+}
+
+@media (min-width: 600px) {
+  .cards-container {
+    grid-template-columns: repeat(2, 1fr); 
+  }
+}
+
+@media (min-width: 1024px) {
+  .cards-container {
+    grid-template-columns: repeat(3, 1fr); 
+  }
+
+  .container {
+  display: grid;
+  grid-template-columns: 2fr 1fr; 
+}
+
+header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
 }
