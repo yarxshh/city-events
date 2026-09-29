@@ -2,16 +2,33 @@
   box-sizing: border-box;
 }
 
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
+  font-size: 16px; 
   line-height: 1.5;
   color: #222;
   background-color: #ffffff;
 }
 
+h1 {
+  font-size: 32px; 
+  margin: 0 0 16px 0;
+}
+
+h2 {
+  font-size: 24px; 
+  margin-top: 0;
+}
+
+p {
+  font-size: 16px;
+}
+
+
 header {
-  background-color: #1a1a1a;
+  background-color: #6A1B9A; 
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -19,8 +36,6 @@ header {
 
 header h1 {
   color: #ffffff;
-  font-size: 2.5rem;
-  margin: 0 0 16px 0;
 }
 
 nav ul {
@@ -37,6 +52,7 @@ nav li {
 nav a {
   color: #ffffff;
   text-decoration: none;
+  font-weight: bold;
 }
 
 main {
@@ -49,16 +65,39 @@ section {
   margin-bottom: 40px;
 }
 
+
 .card {
   border-left: 4px solid #1f6feb; 
   padding: 16px;
   margin-bottom: 10px;
   background-color: #ffffff;
-  
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; 
 }
 
+.event-badge {
+  align-self: flex-start;
+  background-color: #FFC107;
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.badge-music { background-color: #4CAF50; color: #fff; }
+.badge-theatre { background-color: #E91E63; color: #fff; }
 
 
+.event-date {
+  font-size: 18px;
+  font-weight: 800;
+  color: #D84315; 
+}
 
 aside {
   border: 1px solid #cccccc;
@@ -74,7 +113,7 @@ footer {
   padding: 20px;
 }
 
-img{
+img {
   max-width: 100%;
   height: auto;
 }
@@ -97,13 +136,13 @@ img{
   }
 
   .container {
-  display: grid;
-  grid-template-columns: 2fr 1fr; 
-}
+    display: grid;
+    grid-template-columns: 2fr 1fr; 
+  }
 
-header {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-}
+  header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
 }
