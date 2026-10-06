@@ -18,27 +18,44 @@
     </header>
     <div class="container">
     <main>
+        <section id="add-event-section">
+        <h2>Додати нову подію</h2>
+        <form id="add-event-form">
+            <label for="event-title">Назва події:</label>
+            
+            <input type="text" id="event-title" name="title" required pattern=".{3,}">
+
+            <label for="event-category">Категорія:</label>
+            <select id="event-category" name="category" required>
+                <option value="" disabled selected>Оберіть категорію</option>
+                <option value="музика">Музика</option>
+                <option value="театр">Театр</option>
+                <option value="розваги">Розваги</option>
+            </select>
+
+            <label for="event-date">Дата:</label>
+            <input type="date" id="event-date" name="date" required>
+
+            <button type="submit">Додати</button>
+        </form>
+    </section>
+
         <section id="filter-section">
-            <h2>Фільтр за датою/категорією</h2>
-            <label for="date-filter">Дата:</label>
-            <input type="date" id="date-filter">
-        </section>
+        <h2>Фільтр за категорією</h2>
+        <div id="filter-buttons">
+            <button data-filter="all">Всі події</button>
+            <button data-filter="музика">Музика</button>
+            <button data-filter="театр">Театр</button>
+            <button data-filter="розваги">Розваги</button>
+        </div>
+    </section>
 
         <section id="event-section">
-            <h2>Список подій</h2>
-            <div class="cards-container" id="events-list">
-
-                    <article class="card" id="static-card">
-                        <span class="event-badge">Розваги</span>
-                        <h2>Цирк Шапіто "Промінь"</h2>
-                        <div class="event-date">15 жовтня 2026, 18:00</div>
-                        <img src="assets/img/circus.jpg" alt="Цирк Шапіто">
-                        <p>Захоплююча програма для всієї родини: акробати, клоуни та дресировані тварини.</p>
-                    </article>
-
-                </div>
-                
-                <p id="events-count">Тут буде кількість подій</p>
+        <h2>Список подій</h2>
+        
+        <div class="cards-container" id="events-list"></div>
+        <p id="events-count" style="font-weight: bold; margin-top: 20px;"></p>
+    </section>
             
         </section>
     </main>
