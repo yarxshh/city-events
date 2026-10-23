@@ -53,6 +53,12 @@
         <section id="event-section">
         <h2>Список подій</h2>
         
+        <div id="api-controls" style="margin-bottom: 20px;">
+        <button id="refresh-btn">Оновити дані з API</button>
+        <span id="loading-indicator" style="display: none; margin-left: 10px; font-weight: bold; color: #6A1B9A;">Завантаження...</span>
+        <div id="error-message" style="color: red; font-weight: bold; margin-top: 10px;"></div>
+        </div>
+
         <div class="cards-container" id="events-list"></div>
         <p id="events-count" style="font-weight: bold; margin-top: 20px;"></p>
     </section>

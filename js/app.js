@@ -1,15 +1,64 @@
 
-let events = [
-    { title: 'Цирк Шапіто "Промінь"', category: 'розваги', date: '2026-10-15' },
-    { title: 'Концерт гурту "Океан Ельзи"', category: 'музика', date: '2026-10-20' },
-    { title: 'Вистава "Кайдашева сім\'я"', category: 'театр', date: '2026-10-25' }
-];
+let events = [];
 
 const listContainer = document.querySelector('#events-list');
 const countElement = document.querySelector('#events-count');
 const form = document.querySelector('#add-event-form');
 const titleInput = document.querySelector('#event-title');
 const filterContainer = document.querySelector('#filter-buttons');
+
+const refreshBtn = document.querySelector('#refresh-btn');
+const loadingIndicator = document.querySelector('#loading-indicator');
+const errorMessage = document.querySelector('#error-message');
+
+const API_URL = 'https://date.nager.at/api/v3/PublicHolidays/2026/UA';
+
+async function loadData() {
+    loadingIndicator.style.display = 'inline';
+    errorMessage.textContent = '';
+    refreshBtn.disabled = true;
+
+    try {
+        const response = await fetch(API_URL);
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error('Дані про події не знайдено');
+            }
+            throw new Error(`ой, сервер сказав код: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data);
+
+        const mappedEvents = data.map(item => ({
+            title: item.localName,
+            category: 'розваги',
+            date: item.date
+        }));
+
+        events = mappedEvents;
+        renderEvents(events);
+
+    } catch (error) {
+        console.error('Помилка ', error);
+
+        if (error.message === 'Дані про події не знайдено') {
+            errorMessage.textContent = error.message;
+        } else if (error.name === 'TypeError') {
+            errorMessage.textContent = 'Проблема з мережею. Перевірте з\'єднання.';
+        } else {
+            errorMessage.textContent = 'Не вдалося завантажити дані. Спробуйте пізніше.';
+        }
+    } finally {
+        loadingIndicator.style.display = 'none';
+        refreshBtn.disabled = false;
+    }
+}
+
+if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadData);
+}
 
 function renderEvents(eventsArray) {
     if (!listContainer) return;
