@@ -19,7 +19,7 @@ async function loadData() {
     refreshBtn.disabled = true;
 
     try {
-        const response = await fetch(API_URL);
+        const response = await fetch(API_URL, { cache: 'no-store' });
 
         if (!response.ok) {
             if (response.status === 404) {
