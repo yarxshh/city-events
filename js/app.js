@@ -1,143 +1,179 @@
+const API_URL = './holidays.json';
 
-let events = [];
+function EventCard({ title, category, date}){
+    const daysLeft = React.useMemo(() => {
+        const eventDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const timeDiff = eventDate - today;
+        return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    }, [date]);
 
-const listContainer = document.querySelector('#events-list');
-const countElement = document.querySelector('#events-count');
-const form = document.querySelector('#add-event-form');
-const titleInput = document.querySelector('#event-title');
-const filterContainer = document.querySelector('#filter-buttons');
+    let categoryClass = '';
+    switch (category) {
+        case 'музика':
+            categoryClass = 'music';
+            break;
+        case 'театр':
+            categoryClass = 'theater';
+            break;
+        case 'розваги':
+            categoryClass = 'entertainment';
+            break;
+    }
 
-const refreshBtn = document.querySelector('#refresh-btn');
-const loadingIndicator = document.querySelector('#loading-indicator');
-const errorMessage = document.querySelector('#error-message');
+    return( 
+        <article className={`card ${categoryClass}`} data-category={category}>
+            <h3>{title}</h3>
+            <p>Категорія: {category}</p>
+            <p>Дата: {date}</p>
+            <p style={{ fontWeight: 'bold', color: daysLeft >= 0 ? '#6A1B9A' : '#D84315' }}>
+                {daysLeft >= 0 ? `Днів до події: ${daysLeft}` : `Подія минула (${Math.abs(daysLeft)} дн. тому)`} </p>
+        </article>
+        );
+}
 
-const API_URL = 'https://date.nager.at/api/v3/PublicHolidays/2026/UA';
+function App() {
+    const [events, setEvents] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [error, setError] = React.useState('');
+    const [filter, setFilter] = React.useState('all');
+    const [newTitle, setNewTitle] = React.useState('');
+    const [newCategory, setNewCategory] = React.useState('');
+    const [newDate, setNewDate] = React.useState('');
 
-async function loadData() {
-    loadingIndicator.style.display = 'inline';
-    errorMessage.textContent = '';
-    refreshBtn.disabled = true;
-
+    const loadData = async () => {
+    setLoading(true);
+    setError('');
+    
     try {
         const response = await fetch(API_URL, { cache: 'no-store' });
-
+        
         if (!response.ok) {
             if (response.status === 404) {
                 throw new Error('Дані про події не знайдено');
             }
             throw new Error(`ой, сервер сказав код: ${response.status}`);
         }
-
+        
         const data = await response.json();
-        console.log(data);
-
-        const mappedEvents = data.map(item => ({
+        
+        const mappedEvents = data.map((item, index) => ({
+            id: `api-${index}-${item.date}`, 
             title: item.localName,
             category: 'розваги',
             date: item.date
         }));
-
-        events = mappedEvents;
-        renderEvents(events);
-
+        
+        setEvents(mappedEvents);
+        
     } catch (error) {
         console.error('Помилка ', error);
-
+        
         if (error.message === 'Дані про події не знайдено') {
-            errorMessage.textContent = error.message;
+            setError(error.message);
         } else if (error.name === 'TypeError') {
-            errorMessage.textContent = 'Проблема з мережею. Перевірте з\'єднання.';
+            setError("Проблема з мережею. Перевірте з'єднання.");
         } else {
-            errorMessage.textContent = 'Не вдалося завантажити дані. Спробуйте пізніше.';
+            setError('Не вдалося завантажити дані. Спробуйте пізніше.');
         }
     } finally {
-        loadingIndicator.style.display = 'none';
-        refreshBtn.disabled = false;
+        setLoading(false);
     }
-}
+};
 
-if (refreshBtn) {
-    refreshBtn.addEventListener('click', loadData);
-}
+    const handleAddEvent = (e) => {
+        e.preventDefault();
+        const newEvent = {
+            id: `manual-${Date.now()}`,
+            title: newTitle.trim(),
+            category: newCategory,
+            date: newDate
+        };
 
-function renderEvents(eventsArray) {
-    if (!listContainer) return;
-    listContainer.innerHTML = '';
-
-    for (const event of eventsArray) {
-        const card = document.createElement('article');
-        card.classList.add('card');
-        card.dataset.category = event.category;
-
-        const titleElement = document.createElement('h3');
-        titleElement.textContent = event.title;
-
-        const categoryElement = document.createElement('p');
-        categoryElement.textContent = `Категорія: ${event.category}`;
-
-        const dateElement = document.createElement('p');
-        dateElement.textContent = `Дата: ${event.date}`;
-
-        if (event.category === 'музика') {
-            card.classList.add('music');
-        } else if (event.category === 'театр') {
-            card.classList.add('theater');
-        } else if (event.category === 'розваги') {
-            card.classList.add('entertainment');
-        }
-
-        card.append(titleElement, categoryElement, dateElement);
-        listContainer.append(card);
-    }
-
-    if (countElement) {
-        countElement.textContent = `Загальна кількість подій: ${eventsArray.length}`;
-    }
-}
-
-renderEvents(events);
-
-titleInput.addEventListener('input', () => {
-
-    if (titleInput.value.length > 0 && titleInput.value.length < 3) {
-        titleInput.setCustomValidity('Назва події повинна містити мінімум 3 символи.');
-    } else {
-        titleInput.setCustomValidity('');
-    }
-});
-
-form.addEventListener('submit', (event) => {
-
-    event.preventDefault(); 
-
-    const newTitle = document.querySelector('#event-title').value.trim();
-    const newCategory = document.querySelector('#event-category').value;
-    const newDate = document.querySelector('#event-date').value;
-
-    const newEvent = {
-        title: newTitle,
-        category: newCategory,
-        date: newDate
+        setEvents([...events, newEvent]);
+        setNewTitle('');
+        setNewCategory('');
+        setNewDate('');
     };
-    events.push(newEvent);
 
-    renderEvents(events); 
+    const filteredEvents = filter === 'all' ? events : events.filter(event => event.category === filter);
 
-    form.reset();
-});
+    return (
+        <React.Fragment>
+            <section id = "add-event-section">
+                <h2>Додати нову подію</h2>
+                <form onSubmit={handleAddEvent}>
+                    <label htmlFor="event-title">Назва події:</label>
+                    <input
+                        type="text" id ="event-title"
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        required pattern=".{3,}"
+                    />
+                    <label htmlFor="event-category">Категорія:</label>
+                    <select
+                        id="event-category"
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        required
+                    >
+                        <option value="">Виберіть категорію</option>
+                        <option value="музика">Музика</option>
+                        <option value="театр">Театр</option>
+                        <option value="розваги">Розваги</option>
+                    </select>
 
-if (filterContainer) {
+                    <label htmlFor="event-date">Дата:</label>
+                    <input
+                        type="date"
+                        id="event-date"
+                        value={newDate}
+                        onChange={(e) => setNewDate(e.target.value)}
+                        required
+                    />
+                    <button type="submit">Додати подію</button>
+                </form>
+            </section>
+            <section id="filter-section">
+                <h2>Фільтр за категорією</h2>
+                <div id="filter-buttons">
+                    <button onClick={() => setFilter('all')}>Всі події</button>
+                    <button onClick={() => setFilter('музика')}>Музика</button>
+                    <button onClick={() => setFilter('театр')}>Театр</button>
+                    <button onClick={() => setFilter('розваги')}>Розваги</button>
+                </div>
+            </section>
 
-    filterContainer.addEventListener('click', (event) => {
-        if (event.target.tagName === 'BUTTON') {
-            const selectedCategory = event.target.dataset.filter;
-            
-            if (selectedCategory === 'all') {
-                renderEvents(events); 
-            } else {
-                const filteredEvents = events.filter(e => e.category === selectedCategory);
-                renderEvents(filteredEvents);
-            }
-        }
-    });
+            <section id="event-section">
+                <h2>Список подій</h2>
+                
+                <div id="api-controls" style={{ marginBottom: '20px' }}>
+                    <button onClick={loadData} disabled={loading}>Оновити дані з API</button>
+                    <span style={{ display: loading ? 'inline' : 'none', marginLeft: '10px', fontWeight: 'bold', color: '#6A1B9A' }}>
+                        Завантаження...
+                    </span>
+                    <div style={{ color: 'red', fontWeight: 'bold', marginTop: '10px' }}>{error}</div>
+                </div>
+
+                <div className="cards-container">
+                    {filteredEvents.map(event => (
+                        <EventCard 
+                            key={event.id} 
+                            title={event.title} 
+                            category={event.category} 
+                            date={event.date} 
+                        />
+                    ))}
+                </div>
+                <p style={{ fontWeight: 'bold', marginTop: '20px' }}>
+                    Загальна кількість подій: {filteredEvents.length}
+                </p>
+            </section>
+        </React.Fragment>
+    );
 }
+
+const rootNode = document.getElementById('react-root');
+const root = ReactDOM.createRoot(rootNode);
+root.render(<App />);
