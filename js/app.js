@@ -1,16 +1,103 @@
 const API_URL = './holidays.json';
+const LOCAL_STORAGE_KEY = 'events_backup';
+const DB_NAME = 'EventsDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'savedEvents';
 
-function EventCard({ title, category, date}){
+function saveToLocalStorage(items) {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function loadFromLocalStorage() {
+    try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function addItem(item) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put(item);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function getAllItems() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function deleteItem(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function migrateFromLocalStorage() {
+    const isMigrated = localStorage.getItem('migrated_to_idb') === 'true';
+    if (isMigrated) return;
+
+    const localData = loadFromLocalStorage();
+    if (localData.length > 0) {
+        const dbItems = await getAllItems();
+        if (dbItems.length === 0) {
+            for (const item of localData) {
+                await addItem(item);
+            }
+        }
+    }
+    localStorage.setItem('migrated_to_idb', 'true');
+}
+
+function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
     const daysLeft = React.useMemo(() => {
-        const eventDate = new Date(date);
+        const eventDate = new Date(event.date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const timeDiff = eventDate - today;
         return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-    }, [date]);
+    }, [event.date]);
 
     let categoryClass = '';
-    switch (category) {
+    switch (event.category) {
         case 'музика':
             categoryClass = 'music';
             break;
@@ -20,21 +107,60 @@ function EventCard({ title, category, date}){
         case 'розваги':
             categoryClass = 'entertainment';
             break;
+        default:
+            categoryClass = '';
     }
 
-    return( 
-        <article className={`card ${categoryClass}`} data-category={category}>
-            <h3>{title}</h3>
-            <p>Категорія: {category}</p>
-            <p>Дата: {date}</p>
+    return (
+        <article className={`card ${categoryClass}`} data-category={event.category}>
+            <h3>{event.title}</h3>
+            <p>Категорія: {event.category}</p>
+            <p>Дата: {event.date}</p>
             <p style={{ fontWeight: 'bold', color: daysLeft >= 0 ? '#6A1B9A' : '#D84315' }}>
-                {daysLeft >= 0 ? `Днів до події: ${daysLeft}` : `Подія минула (${Math.abs(daysLeft)} дн. тому)`} </p>
+                {daysLeft >= 0 ? `Днів до події: ${daysLeft}` : `Подія минула (${Math.abs(daysLeft)} дн. тому)`}
+            </p>
+            {onAddFavorite && (
+                <button
+                    onClick={() => onAddFavorite(event)}
+                    disabled={isSaved}
+                    style={{
+                        marginTop: '10px',
+                        backgroundColor: isSaved ? '#cccccc' : '#6A1B9A',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: isSaved ? 'default' : 'pointer',
+                        fontWeight: 'bold'
+                    }}
+                >
+                    {isSaved ? 'Уже в обраному' : 'Додати в обране'}
+                </button>
+            )}
+            {onDeleteFavorite && (
+                <button
+                    onClick={() => onDeleteFavorite(event.id)}
+                    style={{
+                        marginTop: '10px',
+                        backgroundColor: '#D84315',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                    }}
+                >
+                    Видалити з обраного
+                </button>
+            )}
         </article>
-        );
+    );
 }
 
 function App() {
     const [events, setEvents] = React.useState([]);
+    const [savedEvents, setSavedEvents] = React.useState([]);
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState('');
     const [filter, setFilter] = React.useState('all');
@@ -42,45 +168,45 @@ function App() {
     const [newCategory, setNewCategory] = React.useState('');
     const [newDate, setNewDate] = React.useState('');
 
-    const loadData = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-        const response = await fetch(API_URL, { cache: 'no-store' });
-        
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('Дані про події не знайдено');
+    const fetchApiEvents = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const response = await fetch(API_URL, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`Помилка мережі: ${response.status}`);
             }
-            throw new Error(`ой, сервер сказав код: ${response.status}`);
+            const data = await response.json();
+            const mappedEvents = data.map((item, index) => ({
+                id: `api-${index}-${item.date}`,
+                title: item.localName,
+                category: 'розваги',
+                date: item.date
+            }));
+            setEvents(mappedEvents);
+        } catch (err) {
+            console.error(err);
+            setError('Не вдалося завантажити події з API.');
+        } finally {
+            setLoading(false);
         }
-        
-        const data = await response.json();
-        
-        const mappedEvents = data.map((item, index) => ({
-            id: `api-${index}-${item.date}`, 
-            title: item.localName,
-            category: 'розваги',
-            date: item.date
-        }));
-        
-        setEvents(mappedEvents);
-        
-    } catch (error) {
-        console.error('Помилка ', error);
-        
-        if (error.message === 'Дані про події не знайдено') {
-            setError(error.message);
-        } else if (error.name === 'TypeError') {
-            setError("Проблема з мережею. Перевірте з'єднання.");
-        } else {
-            setError('Не вдалося завантажити дані. Спробуйте пізніше.');
+    };
+
+    const loadSavedEvents = async () => {
+        try {
+            await migrateFromLocalStorage();
+            const items = await getAllItems();
+            setSavedEvents(items);
+        } catch (err) {
+            console.error(err);
+            setError('Не вдалося отримати доступ до IndexedDB.');
         }
-    } finally {
-        setLoading(false);
-    }
-};
+    };
+
+    React.useEffect(() => {
+        fetchApiEvents();
+        loadSavedEvents();
+    }, []);
 
     const handleAddEvent = (e) => {
         e.preventDefault();
@@ -90,26 +216,55 @@ function App() {
             category: newCategory,
             date: newDate
         };
-
         setEvents([...events, newEvent]);
         setNewTitle('');
         setNewCategory('');
         setNewDate('');
     };
 
-    const filteredEvents = filter === 'all' ? events : events.filter(event => event.category === filter);
+    const handleAddFavorite = async (event) => {
+        try {
+            await addItem(event);
+            const updated = await getAllItems();
+            setSavedEvents(updated);
+            saveToLocalStorage(updated);
+        } catch (err) {
+            console.error(err);
+            setError('Не вдалося додати подію в IndexedDB.');
+        }
+    };
+
+    const handleDeleteFavorite = async (id) => {
+        try {
+            await deleteItem(id);
+            const updated = await getAllItems();
+            setSavedEvents(updated);
+            saveToLocalStorage(updated);
+        } catch (err) {
+            console.error(err);
+            setError('Не вдалося видалити подію з IndexedDB.');
+        }
+    };
+
+    const filteredEvents = filter === 'all'
+        ? events
+        : events.filter(event => event.category === filter);
+
+    const savedIds = new Set(savedEvents.map(e => e.id));
 
     return (
         <React.Fragment>
-            <section id = "add-event-section">
+            <section id="add-event-section">
                 <h2>Додати нову подію</h2>
                 <form onSubmit={handleAddEvent}>
                     <label htmlFor="event-title">Назва події:</label>
                     <input
-                        type="text" id ="event-title"
+                        type="text"
+                        id="event-title"
                         value={newTitle}
                         onChange={(e) => setNewTitle(e.target.value)}
-                        required pattern=".{3,}"
+                        required
+                        pattern=".{3,}"
                     />
                     <label htmlFor="event-category">Категорія:</label>
                     <select
@@ -135,6 +290,7 @@ function App() {
                     <button type="submit">Додати подію</button>
                 </form>
             </section>
+
             <section id="filter-section">
                 <h2>Фільтр за категорією</h2>
                 <div id="filter-buttons">
@@ -146,10 +302,10 @@ function App() {
             </section>
 
             <section id="event-section">
-                <h2>Список подій</h2>
-                
+                <h2>Загальний список подій</h2>
+
                 <div id="api-controls" style={{ marginBottom: '20px' }}>
-                    <button onClick={loadData} disabled={loading}>Оновити дані з API</button>
+                    <button onClick={fetchApiEvents} disabled={loading}>Оновити дані з API</button>
                     <span style={{ display: loading ? 'inline' : 'none', marginLeft: '10px', fontWeight: 'bold', color: '#6A1B9A' }}>
                         Завантаження...
                     </span>
@@ -158,11 +314,11 @@ function App() {
 
                 <div className="cards-container">
                     {filteredEvents.map(event => (
-                        <EventCard 
-                            key={event.id} 
-                            title={event.title} 
-                            category={event.category} 
-                            date={event.date} 
+                        <EventCard
+                            key={event.id}
+                            event={event}
+                            onAddFavorite={handleAddFavorite}
+                            isSaved={savedIds.has(event.id)}
                         />
                     ))}
                 </div>
@@ -170,6 +326,25 @@ function App() {
                     Загальна кількість подій: {filteredEvents.length}
                 </p>
             </section>
+
+            {ReactDOM.createPortal(
+                <React.Fragment>
+                    {savedEvents.length === 0 ? (
+                        <p>Немає збережених подій в обраному.</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            {savedEvents.map(event => (
+                                <EventCard
+                                    key={event.id}
+                                    event={event}
+                                    onDeleteFavorite={handleDeleteFavorite}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </React.Fragment>,
+                document.getElementById('selected-event')
+            )}
         </React.Fragment>
     );
 }
