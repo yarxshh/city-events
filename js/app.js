@@ -88,7 +88,6 @@ async function migrateFromLocalStorage() {
 }
 
 function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
-    // Стейт для керування шириною смуги, щоб запустити CSS transition
     const [barWidth, setBarWidth] = React.useState(0);
 
     const daysLeft = React.useMemo(() => {
@@ -99,18 +98,15 @@ function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
         return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
     }, [event.date]);
 
-    // Запускаємо анімацію після рендеру, прив'язуючись до даних застосунку
     React.useEffect(() => {
         const timer = setTimeout(() => {
             if (daysLeft < 0) {
-                setBarWidth(100); // Подія минула - заповнюємо повністю
+                setBarWidth(100); 
             } else {
-                // Рахуємо відсоток заповнення відносно року (365 днів)
-                // Чим ближче подія, тим більше заповнена смуга
                 const percent = Math.max(0, 100 - (daysLeft / 365) * 100);
                 setBarWidth(percent);
             }
-        }, 50); // Невелика затримка для спрацьовування transition
+        }, 50);
         return () => clearTimeout(timer);
     }, [daysLeft]);
 
@@ -128,7 +124,6 @@ function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
             <p>Категорія: {event.category}</p>
             <p>Дата: {event.date}</p>
             
-            {/* Анімований індикатор прогресу згідно з ТЗ Варіанта 5 */}
             <div className="progress-container" title="Індикатор наближення події">
                 <div 
                     className={`progress-fill ${daysLeft < 0 ? 'past' : ''}`} 
