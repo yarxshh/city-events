@@ -88,6 +88,9 @@ async function migrateFromLocalStorage() {
 }
 
 function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
+    // Стейт для керування шириною смуги, щоб запустити CSS transition
+    const [barWidth, setBarWidth] = React.useState(0);
+
     const daysLeft = React.useMemo(() => {
         const eventDate = new Date(event.date);
         const today = new Date();
@@ -96,19 +99,27 @@ function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
         return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
     }, [event.date]);
 
+    // Запускаємо анімацію після рендеру, прив'язуючись до даних застосунку
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            if (daysLeft < 0) {
+                setBarWidth(100); // Подія минула - заповнюємо повністю
+            } else {
+                // Рахуємо відсоток заповнення відносно року (365 днів)
+                // Чим ближче подія, тим більше заповнена смуга
+                const percent = Math.max(0, 100 - (daysLeft / 365) * 100);
+                setBarWidth(percent);
+            }
+        }, 50); // Невелика затримка для спрацьовування transition
+        return () => clearTimeout(timer);
+    }, [daysLeft]);
+
     let categoryClass = '';
     switch (event.category) {
-        case 'музика':
-            categoryClass = 'music';
-            break;
-        case 'театр':
-            categoryClass = 'theater';
-            break;
-        case 'розваги':
-            categoryClass = 'entertainment';
-            break;
-        default:
-            categoryClass = '';
+        case 'музика': categoryClass = 'music'; break;
+        case 'театр': categoryClass = 'theater'; break;
+        case 'розваги': categoryClass = 'entertainment'; break;
+        default: categoryClass = '';
     }
 
     return (
@@ -116,9 +127,19 @@ function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved }) {
             <h3>{event.title}</h3>
             <p>Категорія: {event.category}</p>
             <p>Дата: {event.date}</p>
+            
+            {/* Анімований індикатор прогресу згідно з ТЗ Варіанта 5 */}
+            <div className="progress-container" title="Індикатор наближення події">
+                <div 
+                    className={`progress-fill ${daysLeft < 0 ? 'past' : ''}`} 
+                    style={{ width: `${barWidth}%` }}
+                ></div>
+            </div>
+
             <p style={{ fontWeight: 'bold', color: daysLeft >= 0 ? '#6A1B9A' : '#D84315' }}>
                 {daysLeft >= 0 ? `Днів до події: ${daysLeft}` : `Подія минула (${Math.abs(daysLeft)} дн. тому)`}
             </p>
+            
             {onAddFavorite && (
                 <button
                     onClick={() => onAddFavorite(event)}
