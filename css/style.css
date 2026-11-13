@@ -130,22 +130,6 @@ img {
   }
 }
 
-@media (min-width: 1024px) {
-  .cards-container {
-    grid-template-columns: repeat(3, 1fr); 
-  }
-
-  .container {
-    display: grid;
-    grid-template-columns: 2fr 1fr; 
-  }
-
-  header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-}
 
 @keyframes slideInUp {
   from {
@@ -156,6 +140,38 @@ img {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@media (min-width: 1024px) {
+  .cards-container {
+    grid-template-columns: repeat(3, 1fr); 
+  }
+
+  .container {
+    display: block;
+  }
+
+  header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.details-link {
+  display: inline-block;
+  margin-top: 15px;
+  color: #6A1B9A;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 8px 12px;
+  border: 1px solid #6A1B9A;
+  border-radius: 4px;
+  text-align: center;
+}
+.details-link:hover {
+  background-color: #6A1B9A;
+  color: #ffffff;
 }
 
 .card {
