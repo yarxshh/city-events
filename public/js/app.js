@@ -4,17 +4,46 @@ const DB_NAME = 'EventsDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'savedEvents';
 
+function escapeHtml(str) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return String(str).replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+function isValidEventObject(item) {
+    return (
+        item !== null &&
+        typeof item === 'object' &&
+        (typeof item.id === 'string' || typeof item.id === 'number') &&
+        typeof item.title === 'string' &&
+        typeof item.category === 'string' &&
+        typeof item.date === 'string'
+    );
+}
+
 function saveToLocalStorage(items) {
-    try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items)); } 
-    catch (error) { console.error(error); }
+    try {
+        const sanitizedItems = Array.isArray(items) ? items.filter(isValidEventObject) : [];
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(sanitizedItems));
+    } catch (error) {
+        console.error('Помилка збереження у localStorage:', error);
+    }
 }
 
 function loadFromLocalStorage() {
     try {
         const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(isValidEventObject);
     } catch (error) {
-        console.error(error);
+        console.error('Помилка читання або валідації localStorage:', error);
         return [];
     }
 }
@@ -34,6 +63,9 @@ function openDB() {
 }
 
 async function addItem(item) {
+    if (!isValidEventObject(item)) {
+        throw new Error('Некоректна структура об’єкта події');
+    }
     const db = await openDB();
     return new Promise((resolve, reject) => {
         const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -50,7 +82,10 @@ async function getAllItems() {
         const tx = db.transaction(STORE_NAME, 'readonly');
         const store = tx.objectStore(STORE_NAME);
         const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+            const result = Array.isArray(request.result) ? request.result.filter(isValidEventObject) : [];
+            resolve(result);
+        };
         request.onerror = () => reject(request.error);
     });
 }
@@ -142,7 +177,7 @@ function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved, showDetail
     }
 
     return (
-        <article className={`card ${categoryClass}`} data-category={event.category}>
+        <article className={`card ${categoryClass}`} data-category={event.category} data-escaped-title={escapeHtml(event.title)}>
             <h3>{event.title}</h3>
             <p>Категорія: {event.category}</p>
             <p>Дата: {event.date}</p>
@@ -192,10 +227,10 @@ function EventCard({ event, onAddFavorite, onDeleteFavorite, isSaved, showDetail
 
             {showDetailsLink && (
                 <a 
-                    href={`#/events/${event.id}`} 
+                    href={`#/events/${encodeURIComponent(event.id)}`} 
                     className="details-link" 
                     data-link
-                    onClick={(e) => navigate(e, `/events/${event.id}`)}
+                    onClick={(e) => navigate(e, `/events/${encodeURIComponent(event.id)}`)}
                 >
                     Деталі події
                 </a>
@@ -300,6 +335,7 @@ function App() {
     const [error, setError] = React.useState('');
     const [filter, setFilter] = React.useState('all');
     const [newTitle, setNewTitle] = React.useState('');
+    const [newLocation, setNewLocation] = React.useState('');
     const [newCategory, setNewCategory] = React.useState('');
     const [newDate, setNewDate] = React.useState('');
 
@@ -335,7 +371,7 @@ function App() {
                 throw new Error(`Помилка сервера: ${response.status}`);
             }
             const data = await response.json();
-            setEvents(data);
+            setEvents(Array.isArray(data) ? data.filter(isValidEventObject) : []);
         } catch (err) {
             console.error(err);
             setError('Не вдалося завантажити події з локального API-сервера.');
@@ -362,11 +398,22 @@ function App() {
 
     const handleAddEvent = (e) => {
         e.preventDefault();
+        const trimmedTitle = newTitle.trim();
+        const trimmedLocation = newLocation.trim();
+        if (!trimmedTitle) return;
+
         const newEvent = {
-            id: `manual-${Date.now()}`, title: newTitle.trim(), category: newCategory, date: newDate
+            id: `manual-${Date.now()}`,
+            title: trimmedTitle,
+            location: trimmedLocation,
+            category: newCategory,
+            date: newDate
         };
         setEvents([...events, newEvent]);
-        setNewTitle(''); setNewCategory(''); setNewDate('');
+        setNewTitle('');
+        setNewLocation('');
+        setNewCategory('');
+        setNewDate('');
     };
 
     const handleAddFavorite = async (event) => {
@@ -401,7 +448,22 @@ function App() {
                     <h2>Додати нову подію</h2>
                     <form onSubmit={handleAddEvent}>
                         <label htmlFor="event-title">Назва події:</label>
-                        <input type="text" id="event-title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} required pattern=".{3,}" />
+                        <input
+                            type="text"
+                            id="event-title"
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                            required
+                            pattern=".{3,}"
+                        />
+                        <label htmlFor="event-location">Локація:</label>
+                        <input
+                            type="text"
+                            id="event-location"
+                            value={newLocation}
+                            onChange={(e) => setNewLocation(e.target.value)}
+                            placeholder="Місце проведення (необов'язково)"
+                        />
                         <label htmlFor="event-category">Категорія:</label>
                         <select id="event-category" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} required>
                             <option value="">Виберіть категорію</option>

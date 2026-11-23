@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 
 const DATA_FILE = path.join(__dirname, 'data', 'events.json');
