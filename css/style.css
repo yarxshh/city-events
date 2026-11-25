@@ -78,10 +78,14 @@ section {
   gap: 12px; 
 }
 
+h3 {
+  font-size: 20px;
+  margin: 0;
+}
+
 .event-badge {
   align-self: flex-start;
-  background-color: #FFC107;
-  color: #000;
+  margin: 0;
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 14px;
@@ -89,9 +93,9 @@ section {
   text-transform: uppercase;
 }
 
+.badge-entertainment { background-color: #FFC107; color: #000; }
 .badge-music { background-color: #4CAF50; color: #fff; }
 .badge-theatre { background-color: #E91E63; color: #fff; }
-
 
 .event-date {
   font-size: 18px;

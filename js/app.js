@@ -58,20 +58,21 @@ function renderEvents(eventsArray) {
     for (const event of eventsArray) {
         const card = document.createElement('article');
         card.classList.add('card');
-
         card.dataset.category = event.category;
 
-        const badge = document.createElement('span');
-        badge.classList.add('event-badge');
-        badge.textContent = event.badgeText;
+        const category = document.createElement('p');
+        category.classList.add('event-badge');
+        category.textContent = event.badgeText;
 
         if (event.category === 'музика') {
-            badge.classList.add('badge-music');
+            category.classList.add('badge-music');
         } else if (event.category === 'театр') {
-            badge.classList.add('badge-theatre');
+            category.classList.add('badge-theatre');
+        } else if (event.category === 'розваги') {
+            category.classList.add('badge-entertainment');
         }
 
-        const title = document.createElement('h2');
+        const title = document.createElement('h3');
         title.textContent = event.title;
 
         const dateDiv = document.createElement('div');
@@ -85,8 +86,7 @@ function renderEvents(eventsArray) {
         const desc = document.createElement('p');
         desc.textContent = event.description;
 
-        card.append(badge, title, dateDiv, img, desc);
-
+        card.append(category, title, dateDiv, img, desc);
         listContainer.append(card);
     }
 
